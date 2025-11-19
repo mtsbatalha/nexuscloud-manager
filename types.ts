@@ -94,3 +94,16 @@ export interface DuplicateCandidate {
   reason: string;
   suggestion: 'keep_a' | 'keep_b' | 'manual';
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}

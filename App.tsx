@@ -7,11 +7,16 @@ import Copilot from './components/Copilot';
 import DuplicateManager from './components/DuplicateManager';
 import SyncManager from './components/SyncManager';
 import ConnectionManager from './components/ConnectionManager';
-import { Connection, FileItem } from './types';
+import UserManager from './components/UserManager';
+import Login from './components/Login';
+import { Connection, FileItem, User, AuthResponse } from './types';
 import { MOCK_CONNECTIONS, getFilesForConnection } from './services/mockData';
-import { Plus, MessageSquare } from 'lucide-react';
+import { MessageSquare, Plus } from 'lucide-react';
 
 const App: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
   const [activeView, setActiveView] = useState('dashboard');
   const [connections, setConnections] = useState<Connection[]>(MOCK_CONNECTIONS);
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
@@ -19,17 +24,39 @@ const App: React.FC = () => {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [currentFiles, setCurrentFiles] = useState<FileItem[]>([]);
 
+  // Check auth on load
+  useEffect(() => {
+    const token = localStorage.getItem('nexus_token');
+    const userStr = localStorage.getItem('nexus_user');
+    if (token && userStr) {
+      setIsAuthenticated(true);
+      setCurrentUser(JSON.parse(userStr));
+    }
+  }, []);
+
   // Load files when connection changes for context
   useEffect(() => {
     if (activeConnection) {
-      // Pass the full connection object to handle dynamic connections properly
       getFilesForConnection(activeConnection).then(setCurrentFiles);
     } else {
       setCurrentFiles([]);
     }
   }, [activeConnection]);
 
-  // Handle view changing via Sidebar
+  const handleLogin = (data: AuthResponse) => {
+    localStorage.setItem('nexus_token', data.token);
+    localStorage.setItem('nexus_user', JSON.stringify(data.user));
+    setCurrentUser(data.user);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('nexus_token');
+    localStorage.removeItem('nexus_user');
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+  };
+
   const handleViewChange = (view: string) => {
     if (view === 'ai-chat') {
       setIsCopilotOpen(!isCopilotOpen);
@@ -39,16 +66,21 @@ const App: React.FC = () => {
     }
   };
 
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={handleLogin} />;
+  }
+
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
         return <Dashboard connections={connections} />;
+      case 'users':
+        return currentUser?.role === 'admin' ? <UserManager /> : <div className="p-8 text-red-400">Acesso Negado</div>;
       case 'cleanup':
         return <DuplicateManager />;
       case 'files':
         return (
           <div className="flex h-full">
-            {/* Connection List sub-sidebar for Files view */}
             <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
                <div className="p-4 border-b border-slate-800 flex justify-between items-center">
                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Conexões</span>
@@ -107,12 +139,16 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
-      <Sidebar activeView={activeView} setActiveView={handleViewChange} />
+      <Sidebar 
+        activeView={activeView} 
+        setActiveView={handleViewChange} 
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
       
       <main className="flex-1 relative overflow-hidden bg-slate-950">
         {renderContent()}
 
-        {/* Copilot Toggle (Floating Action Button style for mobile/quick access) */}
         {!isCopilotOpen && (
           <button
             onClick={() => setIsCopilotOpen(true)}

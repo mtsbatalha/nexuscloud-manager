@@ -1,12 +1,15 @@
 import React from 'react';
-import { HardDrive, Cloud, Settings, Activity, MessageSquare, Layers, LayoutDashboard, Sparkles } from 'lucide-react';
+import { HardDrive, Cloud, Settings, Activity, MessageSquare, Layers, LayoutDashboard, Sparkles, Users, LogOut } from 'lucide-react';
+import { User } from '../types';
 
 interface SidebarProps {
   activeView: string;
   setActiveView: (view: string) => void;
+  currentUser: User | null;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, currentUser, onLogout }) => {
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'files', icon: HardDrive, label: 'Arquivos' },
@@ -14,8 +17,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
     { id: 'sync', icon: Activity, label: 'Sincronização' },
     { id: 'connections', icon: Cloud, label: 'Conexões' },
     { id: 'ai-chat', icon: MessageSquare, label: 'Nexus AI', highlight: true },
-    { id: 'settings', icon: Settings, label: 'Configurações' },
   ];
+
+  if (currentUser?.role === 'admin') {
+    navItems.push({ id: 'users', icon: Users, label: 'Usuários' });
+  }
+
+  navItems.push({ id: 'settings', icon: Settings, label: 'Configurações' });
 
   return (
     <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-full text-slate-300 transition-all duration-300">
@@ -23,7 +31,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
         <div className="bg-primary-600 p-2 rounded-lg">
           <Layers size={24} />
         </div>
-        <h1 className="font-bold text-xl tracking-tight">NexusCloud</h1>
+        <div>
+           <h1 className="font-bold text-lg tracking-tight">NexusCloud</h1>
+           <p className="text-[10px] text-slate-500 uppercase tracking-wider">{currentUser?.role || 'Viewer'}</p>
+        </div>
       </div>
 
       <nav className="flex-1 px-4 space-y-2 mt-4">
@@ -48,17 +59,25 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-slate-800 space-y-4">
         <div className="bg-slate-800/50 p-3 rounded-lg">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span>Armazenamento Total</span>
-            <span>68%</span>
+          <div className="flex items-center gap-3">
+             <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-xs">
+               {currentUser?.name.charAt(0) || 'U'}
+             </div>
+             <div className="overflow-hidden">
+               <p className="text-sm text-white font-medium truncate">{currentUser?.name}</p>
+               <p className="text-xs text-slate-500 truncate">{currentUser?.email}</p>
+             </div>
           </div>
-          <div className="w-full bg-slate-700 rounded-full h-1.5">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 rounded-full w-[68%]"></div>
-          </div>
-          <p className="text-xs text-slate-500 mt-2">3.4TB de 5TB usados</p>
         </div>
+        
+        <button 
+          onClick={onLogout}
+          className="w-full flex items-center justify-center gap-2 py-2 text-xs text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+        >
+          <LogOut size={14} /> Sair do Sistema
+        </button>
       </div>
     </div>
   );
