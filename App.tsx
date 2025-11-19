@@ -1,0 +1,144 @@
+import React, { useState, useEffect } from 'react';
+import Sidebar from './components/Sidebar';
+import FileExplorer from './components/FileExplorer';
+import Dashboard from './components/Dashboard';
+import PreviewModal from './components/PreviewModal';
+import Copilot from './components/Copilot';
+import DuplicateManager from './components/DuplicateManager';
+import SyncManager from './components/SyncManager';
+import ConnectionManager from './components/ConnectionManager';
+import { Connection, FileItem } from './types';
+import { MOCK_CONNECTIONS, getFilesForConnection } from './services/mockData';
+import { Plus, MessageSquare } from 'lucide-react';
+
+const App: React.FC = () => {
+  const [activeView, setActiveView] = useState('dashboard');
+  const [connections, setConnections] = useState<Connection[]>(MOCK_CONNECTIONS);
+  const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
+  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [currentFiles, setCurrentFiles] = useState<FileItem[]>([]);
+
+  // Load files when connection changes for context
+  useEffect(() => {
+    if (activeConnection) {
+      // Pass the full connection object to handle dynamic connections properly
+      getFilesForConnection(activeConnection).then(setCurrentFiles);
+    } else {
+      setCurrentFiles([]);
+    }
+  }, [activeConnection]);
+
+  // Handle view changing via Sidebar
+  const handleViewChange = (view: string) => {
+    if (view === 'ai-chat') {
+      setIsCopilotOpen(!isCopilotOpen);
+    } else {
+      setActiveView(view);
+      if (view === 'dashboard') setActiveConnection(null);
+    }
+  };
+
+  const renderContent = () => {
+    switch (activeView) {
+      case 'dashboard':
+        return <Dashboard connections={connections} />;
+      case 'cleanup':
+        return <DuplicateManager />;
+      case 'files':
+        return (
+          <div className="flex h-full">
+            {/* Connection List sub-sidebar for Files view */}
+            <div className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
+               <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Conexões</span>
+                 <button 
+                   onClick={() => setActiveView('connections')}
+                   className="text-primary-400 hover:text-primary-300"
+                   title="Gerenciar Conexões"
+                 >
+                   <Plus size={16} />
+                 </button>
+               </div>
+               <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                 {connections.length === 0 && (
+                   <div className="p-4 text-center text-xs text-slate-500">
+                     Nenhuma conexão. Adicione uma no menu Conexões.
+                   </div>
+                 )}
+                 {connections.map(conn => (
+                   <button
+                    key={conn.id}
+                    onClick={() => setActiveConnection(conn)}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between ${
+                      activeConnection?.id === conn.id 
+                      ? 'bg-primary-600 text-white' 
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    }`}
+                   >
+                     <span className="truncate">{conn.name}</span>
+                     <span className={`w-1.5 h-1.5 rounded-full ${conn.status === 'connected' ? 'bg-green-400' : 'bg-red-400'}`} />
+                   </button>
+                 ))}
+               </div>
+            </div>
+            <div className="flex-1 h-full overflow-hidden">
+              <FileExplorer 
+                activeConnection={activeConnection} 
+                connections={connections}
+                onPreview={setPreviewFile}
+              />
+            </div>
+          </div>
+        );
+      case 'sync':
+        return <SyncManager connections={connections} />;
+      case 'connections':
+         return (
+          <ConnectionManager 
+            connections={connections} 
+            onUpdateConnections={setConnections} 
+          />
+         );
+      default:
+        return <div className="p-8 text-white">Selecione uma opção</div>;
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
+      <Sidebar activeView={activeView} setActiveView={handleViewChange} />
+      
+      <main className="flex-1 relative overflow-hidden bg-slate-950">
+        {renderContent()}
+
+        {/* Copilot Toggle (Floating Action Button style for mobile/quick access) */}
+        {!isCopilotOpen && (
+          <button
+            onClick={() => setIsCopilotOpen(true)}
+            className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-500 text-white rounded-full shadow-lg shadow-purple-900/40 flex items-center justify-center transition-transform hover:scale-110 z-40"
+            title="Abrir Nexus Copilot"
+          >
+            <MessageSquare size={24} />
+          </button>
+        )}
+
+        <Copilot 
+          isOpen={isCopilotOpen} 
+          onClose={() => setIsCopilotOpen(false)} 
+          currentConnection={activeConnection}
+          currentFiles={currentFiles}
+        />
+      </main>
+
+      {previewFile && (
+        <PreviewModal 
+          file={previewFile} 
+          onClose={() => setPreviewFile(null)} 
+        />
+      )}
+    </div>
+  );
+};
+
+export default App;

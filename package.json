@@ -1,0 +1,20 @@
+{
+  "name": "nexus-cloud-manager",
+  "version": "1.0.0",
+  "description": "Gerenciador de arquivos unificado e inteligente",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "compression": "^1.7.4",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
